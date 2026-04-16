@@ -160,8 +160,10 @@ def render_extract_tab() -> None:
     body_only = build_body_without_spans(s.full_text, s.removed_spans) if s.removed_spans else s.full_text
     st.session_state["extract_result_area"] = result
     st.session_state["extract_body_area"] = body_only
-    st.text_area("추출 결과", height=180, key="extract_result_area", disabled=True)
-    st.text_area("본문 (주석 제거 후)", height=180, key="extract_body_area", disabled=True)
+    st.caption("추출 결과 (우측 상단 복사 아이콘 사용)")
+    st.code(st.session_state["extract_result_area"], language=None)
+    st.caption("본문 (주석 제거 후) (우측 상단 복사 아이콘 사용)")
+    st.code(st.session_state["extract_body_area"], language=None)
 
 
 def _gather_insert_contents(raw_bulk: str, n: int) -> tuple[list[str] | None, list[str], list[str]]:
@@ -180,6 +182,19 @@ def _refresh_insert_candidate(s: InsertState) -> None:
         return
     m = find_next_marker(s.full_text, s.current_k, s.search_from)
     s.candidate_span = None if m is None else m.span()
+
+
+def _insert_candidate_context_preview(
+    text: str, marker_start: int, marker_end: int, context_chars: int = 56
+) -> str:
+    lo = max(0, marker_start - context_chars)
+    hi = min(len(text), marker_end + context_chars)
+    left = text[lo:marker_start]
+    marker = text[marker_start:marker_end]
+    right = text[marker_end:hi]
+    prefix = "..." if lo > 0 else ""
+    suffix = "..." if hi < len(text) else ""
+    return f"{prefix}{left}|{marker}|{right}{suffix}"
 
 
 def render_insert_tab() -> None:
@@ -279,6 +294,11 @@ def render_insert_tab() -> None:
             m = find_next_marker(s.full_text, s.current_k, ms)
             marker = m.group() if m else "?"
             st.caption(f"{s.current_k}/{s.n} · 현재 표식 {marker!r}")
+            if m is not None:
+                preview = _insert_candidate_context_preview(
+                    s.full_text, m.start(), m.end(), context_chars=56
+                )
+                st.code(preview, language=None)
         elif s.done:
             st.caption("단계 확인 완료")
         step_result = apply_insert_replacements(s.full_text, s.confirmed_spans, s.contents) if s.done else ""
