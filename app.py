@@ -304,9 +304,9 @@ def render_insert_tab() -> None:
         step_result = apply_insert_replacements(s.full_text, s.confirmed_spans, s.contents) if s.done else ""
         st.text_area("단계 확인 결과", value=step_result, height=160, key="insert_step_result")
 
+    st.session_state["insert_preview_area"] = st.session_state.get("insert_preview_result", "")
     st.text_area(
         "일괄 결과",
-        value=st.session_state.get("insert_preview_result", ""),
         height=220,
         key="insert_preview_area",
     )
