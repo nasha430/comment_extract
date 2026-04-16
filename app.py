@@ -290,74 +290,12 @@ def render_insert_tab() -> None:
     )
 
 
-def _current_linebreak_match(s: LinebreakState) -> AnchorMatch | None:
-    if s.queue_pos >= len(s.pending):
-        return None
-    return s.pending[s.queue_pos]
-
-
 def render_linebreak_tab() -> None:
     st.subheader("수동 줄바꿈")
     target = st.text_area("대상 텍스트", height=220, key="lb_target")
     anchors_raw = st.text_area("앵커 목록(한 줄에 하나)", height=220, key="lb_anchors")
 
-    c1, c2, c3, c4, c5 = st.columns(5)
-    if c1.button("세션 시작", use_container_width=True, key="lb_start_btn"):
-        target_raw = normalize_newlines(target).rstrip("\n")
-        lines = split_anchor_lines(anchors_raw)
-        if not target_raw.strip():
-            st.warning("대상 텍스트가 비어 있습니다.")
-        elif not lines:
-            st.warning("앵커가 비어 있습니다.")
-        else:
-            pending, not_found = collect_matches(target_raw, lines)
-            st.session_state.lb_state = LinebreakState(
-                target_raw=target_raw,
-                pending=pending,
-                not_found=not_found,
-            )
-            st.session_state.lb_undo = []
-            if not_found:
-                st.warning(f"미매칭 앵커 {len(not_found)}개")
-            st.success("세션 시작 완료")
-
-    if c2.button("여기서 줄바꿈", use_container_width=True, key="lb_approve_btn"):
-        s: LinebreakState | None = st.session_state.get("lb_state")
-        if s is None:
-            st.warning("세션이 없습니다.")
-        else:
-            cur = _current_linebreak_match(s)
-            if cur is None:
-                st.warning("처리할 후보가 없습니다.")
-            else:
-                st.session_state.lb_undo.append((s.queue_pos, tuple(s.approved_break_indices)))
-                s.approved_break_indices.append(cur.index)
-                s.approved_break_indices.sort()
-                s.queue_pos += 1
-
-    if c3.button("건너뛰기", use_container_width=True, key="lb_skip_btn"):
-        s: LinebreakState | None = st.session_state.get("lb_state")
-        if s is None:
-            st.warning("세션이 없습니다.")
-        else:
-            cur = _current_linebreak_match(s)
-            if cur is None:
-                st.warning("처리할 후보가 없습니다.")
-            else:
-                st.session_state.lb_undo.append((s.queue_pos, tuple(s.approved_break_indices)))
-                s.queue_pos += 1
-
-    if c4.button("되돌리기", use_container_width=True, key="lb_undo_btn"):
-        s: LinebreakState | None = st.session_state.get("lb_state")
-        stack = st.session_state.get("lb_undo", [])
-        if s is None or not stack:
-            st.warning("되돌릴 단계가 없습니다.")
-        else:
-            qpos, approved = stack.pop()
-            s.queue_pos = qpos
-            s.approved_break_indices = list(approved)
-
-    if c5.button("앵커 전체 적용", use_container_width=True, key="lb_apply_all_btn"):
+    if st.button("앵커 전체 적용", use_container_width=True, key="lb_apply_all_btn"):
         target_raw = normalize_newlines(target).rstrip("\n")
         lines = split_anchor_lines(anchors_raw)
         if not target_raw.strip():
@@ -374,7 +312,6 @@ def render_linebreak_tab() -> None:
                 approved_break_indices=all_indices,
                 not_found=not_found,
             )
-            st.session_state.lb_undo = []
             st.success(f"{len(all_indices)}곳 적용 완료")
             if not_found:
                 st.warning(f"미매칭 앵커 {len(not_found)}개")
@@ -382,18 +319,6 @@ def render_linebreak_tab() -> None:
     s: LinebreakState | None = st.session_state.get("lb_state")
     if s is None:
         return
-
-    cur = _current_linebreak_match(s)
-    if cur is None:
-        st.caption("모든 후보 처리 완료")
-    else:
-        st.caption(f"[{s.queue_pos + 1}/{len(s.pending)}] 앵커: {cur.anchor!r} · 인덱스: {cur.index}")
-        lo = max(0, cur.index - 48)
-        hi = min(len(s.target_raw), cur.index + len(cur.anchor) + 48)
-        seg = s.target_raw[lo:hi]
-        pipe_at = cur.index - lo
-        preview = seg[:pipe_at] + "|" + seg[pipe_at:]
-        st.text_area("현재 후보 미리보기", value=preview, height=120, disabled=True)
 
     out = build_result_with_breaks(s.target_raw, s.approved_break_indices)
     st.text_area("결과 텍스트", value=out, height=260, key="lb_result")
