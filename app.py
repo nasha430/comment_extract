@@ -158,8 +158,10 @@ def render_extract_tab() -> None:
 
     result = "\n\n".join(f"{num}) {body}".strip() for num, body in s.results)
     body_only = build_body_without_spans(s.full_text, s.removed_spans) if s.removed_spans else s.full_text
-    st.text_area("추출 결과", value=result, height=180, key="extract_result_area")
-    st.text_area("본문 (주석 제거 후)", value=body_only, height=180, key="extract_body_area")
+    st.session_state["extract_result_area"] = result
+    st.session_state["extract_body_area"] = body_only
+    st.text_area("추출 결과", height=180, key="extract_result_area", disabled=True)
+    st.text_area("본문 (주석 제거 후)", height=180, key="extract_body_area", disabled=True)
 
 
 def _gather_insert_contents(raw_bulk: str, n: int) -> tuple[list[str] | None, list[str], list[str]]:
