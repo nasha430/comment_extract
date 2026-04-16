@@ -286,6 +286,7 @@ def render_insert_tab() -> None:
                 st.success("결과를 생성했습니다.")
 
     s: InsertState | None = st.session_state.get("insert_state")
+    step_result = ""
     if s is not None:
         if s.candidate_span is None and not s.done:
             st.caption(f"{s.current_k}/{s.n} · 후보 없음")
@@ -302,8 +303,9 @@ def render_insert_tab() -> None:
         elif s.done:
             st.caption("단계 확인 완료")
         step_result = apply_insert_replacements(s.full_text, s.confirmed_spans, s.contents) if s.done else ""
-        st.text_area("단계 확인 결과", value=step_result, height=160, key="insert_step_result")
 
+    st.session_state["insert_step_result"] = step_result
+    st.text_area("단계 확인 결과", height=160, key="insert_step_result")
     st.session_state["insert_preview_area"] = st.session_state.get("insert_preview_result", "")
     st.text_area(
         "일괄 결과",
